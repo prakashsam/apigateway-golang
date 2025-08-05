@@ -11,14 +11,34 @@ steps:
       - '-c'
       - |
         curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+        # Get credentials for GKE cluster
         gcloud container clusters get-credentials order-service-cluster --region=us-central1
+
+        # Ensure monitoring namespace exists
+        kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+
+        # Add Grafana Helm repo and update
+        helm repo add grafana https://grafana.github.io/helm-charts
+        helm repo update
+
+        # Deploy Grafana using Helm
+        helm upgrade --install grafana grafana/grafana \
+          --namespace monitoring \
+          --set adminUser=admin \
+          --set adminPassword=admin123 \
+          --set service.type=LoadBalancer \
+          --set persistence.enabled=true \
+          --set persistence.size=5Gi
+
+        # Deploy your API Gateway
         helm upgrade --install api-gateway ./helm/api-gateway \
           --set image.repository=us-central1-docker.pkg.dev/lyrical-mason-465314-f4/go-services/api-gateway \
           --set image.tag=$COMMIT_SHA \
           --set env.GCP_PROJECT_ID=lyrical-mason-465314-f4 \
           --set env.ORDER_SERVICE_URL=http://34.56.106.81:8082 \
           --set env.PAYMENT_SERVICE_URL=http://34.10.225.38:8083 \
-          --set env.AUTH_SERVICE_URL=http://34.59.72.129:8081 \
+          --set env.AUTH_SERVICE_URL=http://34.59.72.129:8081
 
 images:
   - 'us-central1-docker.pkg.dev/lyrical-mason-465314-f4/go-services/api-gateway:$COMMIT_SHA'
