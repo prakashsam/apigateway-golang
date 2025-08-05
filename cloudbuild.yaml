@@ -1,28 +1,32 @@
 steps:
+  # Step 1: Build Docker image
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'us-central1-docker.pkg.dev/lyrical-mason-465314-f4/go-services/api-gateway:$COMMIT_SHA', '.']
 
+  # Step 2: Push Docker image
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'us-central1-docker.pkg.dev/lyrical-mason-465314-f4/go-services/api-gateway:$COMMIT_SHA']
 
+  # Step 3: Setup Helm, configure GKE, install everything
   - name: 'gcr.io/cloud-builders/kubectl'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
+        # Install Helm
         curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-        # Get credentials for GKE cluster
+        # Authenticate to your GKE cluster
         gcloud container clusters get-credentials order-service-cluster --region=us-central1
 
-        # Ensure monitoring namespace exists
+        # Create monitoring namespace if not exists
         kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
 
-        # Add Grafana Helm repo and update
+        # Add Grafana repo
         helm repo add grafana https://grafana.github.io/helm-charts
         helm repo update
 
-        # Deploy Grafana using Helm
+        # Install Grafana
         helm upgrade --install grafana grafana/grafana \
           --namespace monitoring \
           --set adminUser=admin \
@@ -31,7 +35,16 @@ steps:
           --set persistence.enabled=true \
           --set persistence.size=5Gi
 
-        # Deploy your API Gateway
+        # Install Loki Stack (Loki + Promtail for log collection)
+        helm upgrade --install loki grafana/loki-stack \
+          --namespace monitoring \
+          --set promtail.enabled=true \
+          --set grafana.enabled=false \
+          --set loki.persistence.enabled=true \
+          --set loki.persistence.size=5Gi \
+          --set loki.persistence.storageClassName=standard
+
+        # Deploy API Gateway using Helm
         helm upgrade --install api-gateway ./helm/api-gateway \
           --set image.repository=us-central1-docker.pkg.dev/lyrical-mason-465314-f4/go-services/api-gateway \
           --set image.tag=$COMMIT_SHA \
