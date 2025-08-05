@@ -1,0 +1,16 @@
+replicaCount: 1
+
+image:
+  repository: us-central1-docker.pkg.dev/lyrical-mason-465314-f4/go-services/api-gateway
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: LoadBalancer
+  port: 8080
+
+env:
+  GCP_PROJECT_ID: lyrical-mason-465314-f4
+  ORDER_SERVICE_URL: http://34.56.106.81:8082
+  PAYMENT_SERVICE_URL: http://34.10.225.38:8083
+  AUTH_SERVICE_URL: http://34.59.72.129:8081

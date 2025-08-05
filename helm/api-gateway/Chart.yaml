@@ -1,0 +1,4 @@
+apiVersion: v2
+name: api gateway
+description: A Helm chart for the Go API Gateway
+version: 0.1.0

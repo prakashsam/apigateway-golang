@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+          env:
+            - name: GCP_PROJECT_ID
+              value: "{{ .Values.env.GCP_PROJECT_ID }}"
+            - name: ORDER_SERVICE_URL
+              value: "{{ .Values.env.ORDER_SERVICE_URL }}"
+            - name: PAYMENT_SERVICE_URL
+              value: "{{ .Values.env.PAYMENT_SERVICE_URL }}"
+            - name: AUTH_SERVICE_URL
+              value: "{{ .Values.env.AUTH_SERVICE_URL }}"
+
